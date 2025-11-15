@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>서비스 사용량 대시보드</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: #f4f4f5;
+      color: #111827;
+    }
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 32px 40px 48px;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .page-title {
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .date-selector {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: white;
+      padding: 10px 16px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    }
+    .date-selector label {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+    .date-selector input[type="date"] {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .date-selector button {
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: none;
+      background: #667eea;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .date-selector button:hover {
+      background: #5568d3;
+    }
+    .main-layout {
+      display: flex;
+      gap: 24px;
+    }
+    .left-section {
+      flex: 1;
+      min-width: 0;
+    }
+    .right-section {
+      width: 360px;
+      flex-shrink: 0;
+    }
+    .summary-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px 28px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      display: flex;
+      justify-content: space-between;
+      gap: 32px;
+      margin-bottom: 24px;
+    }
+    .summary-left {
+      flex: 2;
+    }
+    .summary-label {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    .summary-total {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .summary-meta {
+      font-size: 14px;
+      color: #4b5563;
+      margin-bottom: 8px;
+    }
+    .summary-divider {
+      border-top: 1px solid #e5e7eb;
+      margin: 12px 0;
+    }
+    .summary-right {
+      flex: 1.2;
+      font-size: 13px;
+      color: #4b5563;
+      border-left: 1px solid #e5e7eb;
+      padding-left: 24px;
+    }
+    .summary-right-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .summary-list {
+      margin-bottom: 10px;
+    }
+    .summary-list span.label {
+      display: inline-block;
+      width: 70px;
+      color: #6b7280;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+    .controls-left {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .tag {
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+    }
+    .select,
+    .input {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      font-size: 13px;
+      min-width: 120px;
+      cursor: pointer;
+    }
+    .input {
+      min-width: 200px;
+      cursor: text;
+    }
+    .controls-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .badge-info {
+      font-size: 12px;
+      color: #dc2626;
+      font-weight: 600;
+    }
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .service-card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 170px;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .service-card.hidden {
+      display: none;
+    }
+    .service-card.warning {
+      border: 2px solid #fbbf24;
+      background: #fffbeb;
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+    }
+    .service-card.critical {
+      border: 2px solid #ef4444;
+      background: #fef2f2;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    }
+    .service-card.critical::before {
+      content: "⚠️ 주의";
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      background: #ef4444;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .service-card.warning::before {
+      content: "⚠️ 경고";
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      background: #fbbf24;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .service-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .service-meta {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 2px;
+    }
+    .chip {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      border: 1px solid #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #f9fafb;
+    }
+    .chip-up {
+      color: #16a34a;
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+    .chip-down {
+      color: #dc2626;
+      border-color: #fecaca;
+      background: #fef2f2;
+    }
+    .chip-flat {
+      color: #6b7280;
+    }
+    .card-body {
+      margin-bottom: 8px;
+    }
+    .current-value {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .current-label {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .card-footer {
+      margin-top: 10px;
+    }
+    .footer-label {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+    .sparkline {
+      width: 100%;
+      height: 36px;
+      border-radius: 6px;
+      background: #f9fafb;
+      padding: 4px 6px;
+      border: 1px dashed #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sparkline svg {
+      width: 100%;
+      height: 100%;
+    }
+    .sparkline path {
+      stroke: #9ca3af;
+      stroke-width: 1.5;
+      fill: none;
+    }
+    
+    /* 히스토리 로그 패널 */
+    .history-panel {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      height: calc(100vh - 120px);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 20px;
+    }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .history-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .history-count {
+      font-size: 12px;
+      color: #6b7280;
+      background: #f3f4f6;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .history-logs {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 16px;
+      padding-right: 8px;
+    }
+    .history-logs::-webkit-scrollbar {
+      width: 6px;
+    }
+    .history-logs::-webkit-scrollbar-track {
+      background: #f3f4f6;
+      border-radius: 10px;
+    }
+    .history-logs::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 10px;
+    }
+    .history-logs::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+    .log-entry {
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      border-left: 3px solid #e5e7eb;
+      background: #f9fafb;
+      transition: all 0.2s;
+    }
+    .log-entry:hover {
+      background: #f3f4f6;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .log-entry.critical {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+    .log-entry.warning {
+      border-left-color: #fbbf24;
+      background: #fffbeb;
+    }
+    .log-entry.success {
+      border-left-color: #10b981;
+      background: #f0fdf4;
+    }
+    .log-timestamp {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+    .log-service {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    .log-message {
+      font-size: 12px;
+      color: #4b5563;
+      line-height: 1.5;
+    }
+    .log-status {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+    .log-status.critical {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .log-status.warning {
+      background: #fef3c7;
+      color: #d97706;
+    }
+    .log-status.improved {
+      background: #d1fae5;
+      color: #059669;
+    }
+    .add-log-section {
+      border-top: 2px solid #e5e7eb;
+      padding-top: 16px;
+    }
+    .add-log-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 10px;
+    }
+    .log-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .log-form select,
+    .log-form textarea {
+      padding: 8px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: inherit;
+    }
+    .log-form textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .log-form button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #667eea;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .log-form button:hover {
+      background: #5568d3;
+    }
+    
+    /* 반응형 */
+    @media (max-width: 1400px) {
+      .services-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .right-section {
+        width: 320px;
+      }
+    }
+    @media (max-width: 1100px) {
+      .main-layout {
+        flex-direction: column;
+      }
+      .right-section {
+        width: 100%;
+      }
+      .history-panel {
+        height: 500px;
+        position: relative;
+        top: 0;
+      }
+      .services-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 900px) {
+      .summary-card {
+        flex-direction: column;
+      }
+      .summary-right {
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 16px;
+        margin-top: 8px;
+      }
+      .services-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- 페이지 헤더 -->
+    <div class="page-header">
+      <div class="page-title">📊 서비스 사용량 대시보드 - 문제 우선 모니터링</div>
+      <div class="date-selector">
+        <label>비교 기준:</label>
+        <input type="date" id="startDate" />
+        <span>~</span>
+        <input type="date" id="endDate" />
+        <button id="compareBtn">비교하기</button>
+      </div>
+    </div>
+
+    <!-- 메인 레이아웃 -->
+    <div class="main-layout">
+      <!-- 좌측: 대시보드 -->
+      <div class="left-section">
+        <!-- 상단 요약 카드 -->
+        <section class="summary-card">
+          <div class="summary-left">
+            <div class="summary-label">총 사용량 요약</div>
+            <div class="summary-total">123,456회</div>
+            <div class="summary-meta" id="comparisonPeriod">전월 대비 ▲ 12%</div>
+            <div class="summary-meta">지난 6개월 평균 대비 ▲ 8%</div>
+            <div class="summary-divider"></div>
+            <div class="summary-meta">모니터링 대상 서비스: 18개</div>
+          </div>
+          <div class="summary-right">
+            <div class="summary-right-title">⚠️ 주의가 필요한 서비스</div>
+            <div class="summary-list">
+              <span class="label">심각</span> G(-15%), R(-10%)
+            </div>
+            <div class="summary-list">
+              <span class="label">경고</span> B(-3%), M(-2%), Q(-4%)
+            </div>
+            <div class="summary-list">
+              <span class="label">양호</span> 상승 TOP3: F(+20%), L(+18%), C(+12%)
+            </div>
+          </div>
+        </section>
+
+        <!-- 필터 / 정렬 -->
+        <section class="controls">
+          <div class="controls-left">
+            <div class="tag" id="periodTag">최근 6개월</div>
+            <select class="select" id="sortSelect">
+              <option value="problem">정렬: 문제 우선순위순 (기본)</option>
+              <option value="decrease">정렬: 감소율 높은 순</option>
+              <option value="increase">정렬: 증가율 높은 순</option>
+              <option value="usage-desc">정렬: 사용량 많은 순</option>
+              <option value="usage-asc">정렬: 사용량 적은 순</option>
+              <option value="name">정렬: 서비스명 오름차순</option>
+            </select>
+          </div>
+          <div class="controls-right">
+            <input class="input" id="searchInput" placeholder="서비스명 검색" />
+            <span class="badge-info">⚠️ 문제 서비스 우선 표시</span>
+          </div>
+        </section>
+
+        <!-- 서비스 카드 그리드 -->
+        <section class="services-grid" id="servicesGrid">
+          
+          <!-- 심각 (10% 이상 감소) -->
+          <article class="service-card critical" data-name="서비스 G" data-change="-15" data-usage="3450" data-severity="3">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 G</div>
+                <div class="service-meta">ID: svc-g</div>
+              </div>
+              <div class="chip chip-down">
+                ▼ 15% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">3,450</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 6 L20 8 L40 12 L60 16 L80 22 L100 26" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card critical" data-name="서비스 R" data-change="-10" data-usage="4560" data-severity="3">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 R</div>
+                <div class="service-meta">ID: svc-r</div>
+              </div>
+              <div class="chip chip-down">
+                ▼ 10% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">4,560</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 8 L20 10 L40 13 L60 17 L80 21 L100 24" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <!-- 경고 (2-9% 감소) -->
+          <article class="service-card warning" data-name="서비스 Q" data-change="-4" data-usage="6180" data-severity="2">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 Q</div>
+                <div class="service-meta">ID: svc-q</div>
+              </div>
+              <div class="chip chip-down">
+                ▼ 4% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">6,180</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 10 L20 12 L40 14 L60 16 L80 19 L100 20" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card warning" data-name="서비스 B" data-change="-3" data-usage="8900" data-severity="2">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 B</div>
+                <div class="service-meta">ID: svc-b</div>
+              </div>
+              <div class="chip chip-down">
+                ▼ 3% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">8,900</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 8 L20 10 L40 14 L60 18 L80 22 L100 24" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card warning" data-name="서비스 M" data-change="-2" data-usage="7640" data-severity="2">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 M</div>
+                <div class="service-meta">ID: svc-m</div>
+              </div>
+              <div class="chip chip-down">
+                ▼ 2% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">7,640</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 12 L20 13 L40 15 L60 16 L80 17 L100 18" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <!-- 변화 없음 또는 소폭 변화 -->
+          <article class="service-card" data-name="서비스 J" data-change="-1" data-usage="5280" data-severity="1">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 J</div>
+                <div class="service-meta">ID: svc-j</div>
+              </div>
+              <div class="chip chip-flat">
+                - 1% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">5,280</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 15 L20 16 L40 15 L60 14 L80 15 L100 16" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 D" data-change="0" data-usage="4320" data-severity="1">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 D</div>
+                <div class="service-meta">ID: svc-d</div>
+              </div>
+              <div class="chip chip-flat">
+                - 0% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">4,320</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 16 L20 15 L40 16 L60 15 L80 16 L100 15" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 O" data-change="1" data-usage="5890" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 O</div>
+                <div class="service-meta">ID: svc-o</div>
+              </div>
+              <div class="chip chip-flat">
+                + 1% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">5,890</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 16 L20 15 L40 16 L60 15 L80 16 L100 15" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <!-- 양호 (소폭 증가) -->
+          <article class="service-card" data-name="서비스 I" data-change="3" data-usage="6720" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 I</div>
+                <div class="service-meta">ID: svc-i</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 3% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">6,720</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 18 L20 17 L40 16 L60 15 L80 14 L100 13" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 E" data-change="5" data-usage="9110" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 E</div>
+                <div class="service-meta">ID: svc-e</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 5% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">9,110</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 24 L20 20 L40 22 L60 18 L80 16 L100 14" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 N" data-change="6" data-usage="10220" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 N</div>
+                <div class="service-meta">ID: svc-n</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 6% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">10,220</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 21 L20 19 L40 18 L60 16 L80 14 L100 12" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 H" data-change="7" data-usage="11890" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 H</div>
+                <div class="service-meta">ID: svc-h</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 7% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">11,890</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 22 L20 20 L40 18 L60 15 L80 12 L100 10" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 A" data-change="8" data-usage="12300" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 A</div>
+                <div class="service-meta">ID: svc-a</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 8% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">12,300</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 20 L20 24 L40 18 L60 16 L80 10 L100 8" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 K" data-change="9" data-usage="14560" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 K</div>
+                <div class="service-meta">ID: svc-k</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 9% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">14,560</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 25 L20 22 L40 19 L60 17 L80 13 L100 9" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 P" data-change="11" data-usage="13470" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 P</div>
+                <div class="service-meta">ID: svc-p</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 11% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">13,470</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 24 L20 21 L40 19 L60 16 L80 12 L100 8" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 C" data-change="12" data-usage="22150" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 C</div>
+                <div class="service-meta">ID: svc-c</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 12% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">22,150</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 22 L20 18 L40 20 L60 16 L80 12 L100 6" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <!-- 우수 (높은 증가율) -->
+          <article class="service-card" data-name="서비스 L" data-change="18" data-usage="19320" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 L</div>
+                <div class="service-meta">ID: svc-l</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 18% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">19,320</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 28 L20 24 L40 21 L60 17 L80 11 L100 5" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card" data-name="서비스 F" data-change="20" data-usage="15040" data-severity="0">
+            <div class="card-header">
+              <div>
+                <div class="service-name">서비스 F</div>
+                <div class="service-meta">ID: svc-f</div>
+              </div>
+              <div class="chip chip-up">
+                ▲ 20% <span>(전월 대비)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="current-value">15,040</div>
+              <div class="current-label">이번달 총 사용량</div>
+            </div>
+            <div class="card-footer">
+              <div class="footer-label">지난 6개월 사용량 변화</div>
+              <div class="sparkline">
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <path d="M0 26 L20 22 L40 20 L60 16 L80 10 L100 4" />
+                </svg>
+              </div>
+            </div>
+          </article>
+
+        </section>
+      </div>
+
+      <!-- 우측: 히스토리 로그 패널 -->
+      <div class="right-section">
+        <div class="history-panel">
+          <div class="history-header">
+            <div class="history-title">📝 업데이트 히스토리</div>
+            <div class="history-count" id="logCount">5개</div>
+          </div>
+
+          <div class="history-logs" id="historyLogs">
+            <!-- 샘플 로그 엔트리 -->
+            <div class="log-entry critical">
+              <div class="log-timestamp">2025-11-15 09:23</div>
+              <div class="log-service">서비스 G</div>
+              <div class="log-message">양호에서 주의로 변경. 원인: 신규 경쟁사 출현으로 인한 사용자 이탈. 대응 방안 논의 필요.</div>
+              <span class="log-status critical">심각</span>
+            </div>
+
+            <div class="log-entry warning">
+              <div class="log-timestamp">2025-11-15 08:45</div>
+              <div class="log-service">서비스 R</div>
+              <div class="log-message">2개월 연속 하락 중. 원인: UI 개편 후 사용자 불편 접수 증가. UX 개선 작업 진행 중.</div>
+              <span class="log-status warning">경고</span>
+            </div>
+
+            <div class="log-entry success">
+              <div class="log-timestamp">2025-11-14 16:20</div>
+              <div class="log-service">서비스 F</div>
+              <div class="log-message">20% 증가! 원인: 신규 기능 추가 후 긍정적 반응. 마케팅 효과도 우수.</div>
+              <span class="log-status improved">개선</span>
+            </div>
+
+            <div class="log-entry warning">
+              <div class="log-timestamp">2025-11-14 11:30</div>
+              <div class="log-service">서비스 B</div>
+              <div class="log-message">소폭 하락. 원인: 시즌 비수기 진입. 정상 범위 내 변동으로 판단.</div>
+              <span class="log-status warning">경고</span>
+            </div>
+
+            <div class="log-entry success">
+              <div class="log-timestamp">2025-11-13 14:15</div>
+              <div class="log-service">서비스 L</div>
+              <div class="log-message">지속적인 성장세 유지. 원인: 고객 만족도 향상 및 입소문 효과.</div>
+              <span class="log-status improved">개선</span>
+            </div>
+          </div>
+
+          <div class="add-log-section">
+            <div class="add-log-title">➕ 새 메모 추가</div>
+            <form class="log-form" id="logForm">
+              <select id="logService" required>
+                <option value="">서비스 선택</option>
+                <option value="서비스 A">서비스 A</option>
+                <option value="서비스 B">서비스 B</option>
+                <option value="서비스 C">서비스 C</option>
+                <option value="서비스 D">서비스 D</option>
+                <option value="서비스 E">서비스 E</option>
+                <option value="서비스 F">서비스 F</option>
+                <option value="서비스 G">서비스 G</option>
+                <option value="서비스 H">서비스 H</option>
+                <option value="서비스 I">서비스 I</option>
+                <option value="서비스 J">서비스 J</option>
+                <option value="서비스 K">서비스 K</option>
+                <option value="서비스 L">서비스 L</option>
+                <option value="서비스 M">서비스 M</option>
+                <option value="서비스 N">서비스 N</option>
+                <option value="서비스 O">서비스 O</option>
+                <option value="서비스 P">서비스 P</option>
+                <option value="서비스 Q">서비스 Q</option>
+                <option value="서비스 R">서비스 R</option>
+              </select>
+              <select id="logType" required>
+                <option value="">상태 선택</option>
+                <option value="critical">심각</option>
+                <option value="warning">경고</option>
+                <option value="success">개선</option>
+              </select>
+              <textarea id="logMessage" placeholder="메모 내용을 입력하세요..." required></textarea>
+              <button type="submit">메모 추가</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 날짜 초기화
+    const today = new Date();
+    const lastMonth = new Date(today);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    
+    document.getElementById('startDate').valueAsDate = lastMonth;
+    document.getElementById('endDate').valueAsDate = today;
+
+    // 서비스 카드 데이터 및 정렬/검색 기능
+    const servicesGrid = document.getElementById('servicesGrid');
+    const sortSelect = document.getElementById('sortSelect');
+    const searchInput = document.getElementById('searchInput');
+    const compareBtn = document.getElementById('compareBtn');
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+
+    // 날짜 비교 기능
+    compareBtn.addEventListener('click', () => {
+      const start = new Date(startDate.value);
+      const end = new Date(endDate.value);
+      
+      if (!startDate.value || !endDate.value) {
+        alert('날짜를 모두 선택해주세요.');
+        return;
+      }
+      
+      if (start >= end) {
+        alert('종료 날짜는 시작 날짜보다 이후여야 합니다.');
+        return;
+      }
+
+      const startStr = start.toLocaleDateString('ko-KR');
+      const endStr = end.toLocaleDateString('ko-KR');
+      
+      document.getElementById('comparisonPeriod').textContent = 
+        `${startStr} ~ ${endStr} 비교 결과 ▲ 12%`;
+      
+      document.getElementById('periodTag').textContent = 
+        `${startStr} ~ ${endStr}`;
+      
+      // 로그 추가
+      addLog('시스템', 'success', `날짜 범위 변경: ${startStr} ~ ${endStr}로 데이터를 비교합니다.`);
+    });
+
+    // 정렬 함수
+    function sortCards(sortType) {
+      const cards = Array.from(servicesGrid.querySelectorAll('.service-card'));
+      
+      cards.sort((a, b) => {
+        const changeA = parseFloat(a.dataset.change);
+        const changeB = parseFloat(b.dataset.change);
+        const usageA = parseFloat(a.dataset.usage);
+        const usageB = parseFloat(b.dataset.usage);
+        const nameA = a.dataset.name;
+        const nameB = b.dataset.name;
+        const severityA = parseInt(a.dataset.severity);
+        const severityB = parseInt(b.dataset.severity);
+
+        switch(sortType) {
+          case 'problem':
+            if (severityB !== severityA) {
+              return severityB - severityA;
+            }
+            return changeA - changeB;
+          case 'decrease':
+            return changeA - changeB;
+          case 'increase':
+            return changeB - changeA;
+          case 'usage-desc':
+            return usageB - usageA;
+          case 'usage-asc':
+            return usageA - usageB;
+          case 'name':
+            return nameA.localeCompare(nameB);
+          default:
+            return 0;
+        }
+      });
+
+      cards.forEach(card => servicesGrid.appendChild(card));
+    }
+
+    // 검색 함수
+    function filterCards(searchTerm) {
+      const cards = servicesGrid.querySelectorAll('.service-card');
+      const term = searchTerm.toLowerCase().trim();
+
+      cards.forEach(card => {
+        const serviceName = card.dataset.name.toLowerCase();
+        if (serviceName.includes(term) || term === '') {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    // 이벤트 리스너
+    sortSelect.addEventListener('change', (e) => {
+      sortCards(e.target.value);
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      filterCards(e.target.value);
+    });
+
+    // 초기 정렬
+    sortCards('problem');
+
+    // 히스토리 로그 관리
+    const historyLogs = document.getElementById('historyLogs');
+    const logForm = document.getElementById('logForm');
+    const logCount = document.getElementById('logCount');
+
+    function updateLogCount() {
+      const count = historyLogs.querySelectorAll('.log-entry').length;
+      logCount.textContent = `${count}개`;
+    }
+
+    function addLog(service, type, message) {
+      const now = new Date();
+      const timestamp = now.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${type}`;
+      
+      const statusText = {
+        'critical': '심각',
+        'warning': '경고',
+        'success': '개선'
+      };
+
+      logEntry.innerHTML = `
+        <div class="log-timestamp">${timestamp}</div>
+        <div class="log-service">${service}</div>
+        <div class="log-message">${message}</div>
+        <span class="log-status ${type === 'success' ? 'improved' : type}">${statusText[type]}</span>
+      `;
+
+      historyLogs.insertBefore(logEntry, historyLogs.firstChild);
+      updateLogCount();
+
+      // 스크롤을 맨 위로
+      historyLogs.scrollTop = 0;
+    }
+
+    logForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const service = document.getElementById('logService').value;
+      const type = document.getElementById('logType').value;
+      const message = document.getElementById('logMessage').value;
+
+      if (!service || !type || !message) {
+        alert('모든 필드를 입력해주세요.');
+        return;
+      }
+
+      addLog(service, type, message);
+
+      // 폼 초기화
+      logForm.reset();
+    });
+
+    // 초기 로그 카운트 업데이트
+    updateLogCount();
+  </script>
+</body>
+</html>
